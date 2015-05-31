@@ -1,4 +1,13 @@
  {.deadCodeElim: on.}
+when defined(windows): 
+  const 
+    libpahomqtt* = "paho-mqtt3c.dll"
+elif defined(macosx): 
+  const 
+    libpahomqtt* = "libpaho-mqtt3c.dylib"
+else: 
+  const 
+    libpahomqtt* = "libpaho-mqtt3c.so"
 #******************************************************************************
 #  Copyright (c) 2009, 2015 IBM Corp.
 # 
@@ -349,7 +358,7 @@ when not defined(MQTTCLIENT_H):
                                 cl: ptr MQTTClient_connectionLost; 
                                 ma: ptr MQTTClient_messageArrived; 
                                 dc: ptr MQTTClient_deliveryComplete): cint {.
-      cdecl, importc: "MQTTClient_setCallbacks", dynlib: "libpaho-mqtt3c.so".}
+      cdecl, importc: "MQTTClient_setCallbacks", dynlib: libpahomqtt.}
   #*
   #  This function creates an MQTT client ready for connection to the 
   #  specified server and using the specified persistent storage (see 
@@ -397,7 +406,7 @@ when not defined(MQTTCLIENT_H):
   proc MQTTClient_create*(handle: ptr MQTTClient; serverURI: cstring; 
                           clientId: cstring; persistence_type: cint; 
                           persistence_context: pointer): cint {.cdecl, 
-      importc: "MQTTClient_create", dynlib: "libpaho-mqtt3c.so".}
+      importc: "MQTTClient_create", dynlib: libpahomqtt.}
   #*
   #  MQTTClient_willOptions defines the MQTT "Last Will and Testament" (LWT) settings for
   #  the client. In the event that a client unexpectedly loses its connection to
@@ -477,7 +486,7 @@ when not defined(MQTTCLIENT_H):
   #  for #keepAliveInterval.
   # 
   type 
-    INNER_C_STRUCT_558381282502316645* = object 
+    INNER_C_STRUCT_394021935909782948* = object 
       serverURI*: cstring     #*< the serverURI connected to 
       MQTTVersion*: cint      #*< the MQTT version used to connect with 
       sessionPresent*: cint   #*< if the MQTT version is 3.1.1, the value of sessionPresent returned in the connack 
@@ -577,7 +586,7 @@ when not defined(MQTTCLIENT_H):
       MQTTVersion*: cint #*
                          #   Returned from the connect when the MQTT version used to connect is 3.1.1
                          #  
-      returned*: INNER_C_STRUCT_558381282502316645
+      returned*: INNER_C_STRUCT_394021935909782948
 
   ##define MQTTClient_connectOptions_initializer { {'M', 'Q', 'T', 'C'}, 4, 60, 1, 1, NULL, NULL, NULL, 30, 20, NULL, 0, NULL, 0}
   #*
@@ -597,7 +606,7 @@ when not defined(MQTTCLIENT_H):
   #   @return an array of strings describing the library.  The last entry is a NULL pointer.
   #  
   proc MQTTClient_getVersionInfo*(): ptr MQTTClient_nameValue {.cdecl, 
-      importc: "MQTTClient_getVersionInfo", dynlib: "libpaho-mqtt3c.so".}
+      importc: "MQTTClient_getVersionInfo", dynlib: libpahomqtt.}
   #*
   #   This function attempts to connect a previously-created client (see
   #   MQTTClient_create()) to an MQTT server using the specified options. If you
@@ -620,7 +629,7 @@ when not defined(MQTTCLIENT_H):
   #  
   proc MQTTClient_connect*(handle: MQTTClient; 
                            options: ptr MQTTClient_connectOptions): cint {.
-      cdecl, importc: "MQTTClient_connect", dynlib: "libpaho-mqtt3c.so".}
+      cdecl, importc: "MQTTClient_connect", dynlib: libpahomqtt.}
   #*
   #   This function attempts to disconnect the client from the MQTT
   #   server. In order to allow the client time to complete handling of messages
@@ -640,7 +649,7 @@ when not defined(MQTTCLIENT_H):
   #   from the server
   #  
   proc MQTTClient_disconnect*(handle: MQTTClient; timeout: cint): cint {.cdecl, 
-      importc: "MQTTClient_disconnect", dynlib: "libpaho-mqtt3c.so".}
+      importc: "MQTTClient_disconnect", dynlib: libpahomqtt.}
   #*
   #   This function allows the client application to test whether or not a
   #   client is currently connected to the MQTT server.
@@ -649,7 +658,7 @@ when not defined(MQTTCLIENT_H):
   #   @return Boolean true if the client is connected, otherwise false.
   #  
   proc MQTTClient_isConnected*(handle: MQTTClient): cint {.cdecl, 
-      importc: "MQTTClient_isConnected", dynlib: "libpaho-mqtt3c.so".}
+      importc: "MQTTClient_isConnected", dynlib: libpahomqtt.}
   # Subscribe is synchronous.  QoS list parameter is changed on return to granted QoSs.
   #   Returns return code, MQTTCLIENT_SUCCESS == success, non-zero some sort of error (TBD) 
   #*
@@ -666,7 +675,7 @@ when not defined(MQTTCLIENT_H):
   #   subscription. 
   #  
   proc MQTTClient_subscribe*(handle: MQTTClient; topic: cstring; qos: cint): cint {.
-      cdecl, importc: "MQTTClient_subscribe", dynlib: "libpaho-mqtt3c.so".}
+      cdecl, importc: "MQTTClient_subscribe", dynlib: libpahomqtt.}
   #*
   #   This function attempts to subscribe a client to a list of topics, which may
   #   contain wildcards (see @ref wildcard). This call also specifies the 
@@ -685,7 +694,7 @@ when not defined(MQTTCLIENT_H):
   #  
   proc MQTTClient_subscribeMany*(handle: MQTTClient; count: cint; 
                                  topic: cstringArray; qos: ptr cint): cint {.
-      cdecl, importc: "MQTTClient_subscribeMany", dynlib: "libpaho-mqtt3c.so".}
+      cdecl, importc: "MQTTClient_subscribeMany", dynlib: libpahomqtt.}
   #* 
   #   This function attempts to remove an existing subscription made by the 
   #   specified client.
@@ -698,7 +707,7 @@ when not defined(MQTTCLIENT_H):
   #   subscription. 
   #  
   proc MQTTClient_unsubscribe*(handle: MQTTClient; topic: cstring): cint {.
-      cdecl, importc: "MQTTClient_unsubscribe", dynlib: "libpaho-mqtt3c.so".}
+      cdecl, importc: "MQTTClient_unsubscribe", dynlib: libpahomqtt.}
   #* 
   #   This function attempts to remove existing subscriptions to a list of topics
   #   made by the specified client.
@@ -712,7 +721,7 @@ when not defined(MQTTCLIENT_H):
   #  
   proc MQTTClient_unsubscribeMany*(handle: MQTTClient; count: cint; 
                                    topic: cstringArray): cint {.cdecl, 
-      importc: "MQTTClient_unsubscribeMany", dynlib: "libpaho-mqtt3c.so".}
+      importc: "MQTTClient_unsubscribeMany", dynlib: libpahomqtt.}
   #* 
   #   This function attempts to publish a message to a given topic (see also
   #   MQTTClient_publishMessage()). An ::MQTTClient_deliveryToken is issued when 
@@ -737,7 +746,7 @@ when not defined(MQTTCLIENT_H):
   proc MQTTClient_publish*(handle: MQTTClient; topicName: cstring; 
                            payloadlen: cint; payload: pointer; qos: cint; 
                            retained: cint; dt: ptr MQTTClient_deliveryToken): cint {.
-      cdecl, importc: "MQTTClient_publish", dynlib: "libpaho-mqtt3c.so".}
+      cdecl, importc: "MQTTClient_publish", dynlib: libpahomqtt.}
   #* 
   #   This function attempts to publish a message to a given topic (see also
   #   MQTTClient_publish()). An ::MQTTClient_deliveryToken is issued when 
@@ -760,7 +769,7 @@ when not defined(MQTTCLIENT_H):
   proc MQTTClient_publishMessage*(handle: MQTTClient; topicName: cstring; 
                                   msg: ptr MQTTClient_message; 
                                   dt: ptr MQTTClient_deliveryToken): cint {.
-      cdecl, importc: "MQTTClient_publishMessage", dynlib: "libpaho-mqtt3c.so".}
+      cdecl, importc: "MQTTClient_publishMessage", dynlib: libpahomqtt.}
   #*
   #   This function is called by the client application to synchronize execution
   #   of the main thread with completed publication of a message. When called,
@@ -779,7 +788,7 @@ when not defined(MQTTCLIENT_H):
   proc MQTTClient_waitForCompletion*(handle: MQTTClient; 
                                      dt: MQTTClient_deliveryToken; 
                                      timeout: culong): cint {.cdecl, 
-      importc: "MQTTClient_waitForCompletion", dynlib: "libpaho-mqtt3c.so".}
+      importc: "MQTTClient_waitForCompletion", dynlib: libpahomqtt.}
   #*
   #   This function sets a pointer to an array of delivery tokens for 
   #   messages that are currently in-flight (pending completion). 
@@ -800,8 +809,7 @@ when not defined(MQTTCLIENT_H):
   #  
   proc MQTTClient_getPendingDeliveryTokens*(handle: MQTTClient; 
       tokens: ptr ptr MQTTClient_deliveryToken): cint {.cdecl, 
-      importc: "MQTTClient_getPendingDeliveryTokens", 
-      dynlib: "libpaho-mqtt3c.so".}
+      importc: "MQTTClient_getPendingDeliveryTokens", dynlib: libpahomqtt.}
   #*
   #   When implementing a single-threaded client, call this function periodically
   #   to allow processing of message retries and to send MQTT keepalive pings.
@@ -809,7 +817,7 @@ when not defined(MQTTCLIENT_H):
   #   not necessary to call this function.
   #  
   proc MQTTClient_yield*() {.cdecl, importc: "MQTTClient_yield", 
-                             dynlib: "libpaho-mqtt3c.so".}
+                             dynlib: libpahomqtt.}
   #*
   #   This function performs a synchronous receive of incoming messages. It should
   #   be used only when the client application has not set callback methods to
@@ -844,7 +852,7 @@ when not defined(MQTTCLIENT_H):
   proc MQTTClient_receive*(handle: MQTTClient; topicName: ptr cstring; 
                            topicLen: ptr cint; 
                            message: ptr ptr MQTTClient_message; timeout: culong): cint {.
-      cdecl, importc: "MQTTClient_receive", dynlib: "libpaho-mqtt3c.so".}
+      cdecl, importc: "MQTTClient_receive", dynlib: libpahomqtt.}
   #*
   #   This function frees memory allocated to an MQTT message, including the 
   #   additional memory allocated to the message payload. The client application
@@ -856,7 +864,7 @@ when not defined(MQTTCLIENT_H):
   #   to be freed.
   #  
   proc MQTTClient_freeMessage*(msg: ptr ptr MQTTClient_message) {.cdecl, 
-      importc: "MQTTClient_freeMessage", dynlib: "libpaho-mqtt3c.so".}
+      importc: "MQTTClient_freeMessage", dynlib: libpahomqtt.}
   #*
   #   This function frees memory allocated by the MQTT C client library, especially the
   #   topic name. This is needed on Windows when the client libary and application
@@ -866,7 +874,7 @@ when not defined(MQTTCLIENT_H):
   #   @param ptr The pointer to the client library storage to be freed.
   #  
   proc MQTTClient_free*(`ptr`: pointer) {.cdecl, importc: "MQTTClient_free", 
-      dynlib: "libpaho-mqtt3c.so".}
+      dynlib: libpahomqtt.}
   #* 
   #   This function frees the memory allocated to an MQTT client (see
   #   MQTTClient_create()). It should be called when the client is no longer 
@@ -875,7 +883,7 @@ when not defined(MQTTCLIENT_H):
   #   structure to be freed.
   #  
   proc MQTTClient_destroy*(handle: ptr MQTTClient) {.cdecl, 
-      importc: "MQTTClient_destroy", dynlib: "libpaho-mqtt3c.so".}
+      importc: "MQTTClient_destroy", dynlib: libpahomqtt.}
 #*
 #   @cond MQTTClient_main
 #   @page async Asynchronous vs synchronous client applications

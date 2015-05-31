@@ -1,6 +1,13 @@
 #ifdef C2NIM
-#  dynlib "\"libpaho-mqtt3c.so\""
+#  dynlib libpahomqtt
 #  cdecl
+#  if defined(windows)
+#    define libpahomqtt "paho-mqtt3c.dll"
+#  elif defined(macosx)
+#    define libpahomqtt "libpaho-mqtt3c.dylib"
+#  else
+#    define libpahomqtt "libpaho-mqtt3c.so"
+#  endif
 #endif
 
 /*******************************************************************************
