@@ -2,11 +2,6 @@ import sequtils
 # low-level c2nim MQTTClient.h generated wrapper for libpaho-mqtt3c.so
 import MQTTClient
 
-# Helper to create a string from a cstring+len
-proc `$`(cs: cstring, len: int): string =
-  result = newString(len)
-  copyMem(addr(result[0]), cs, len)
-
 type MQTTError* = object of Exception
 
 type MQTTStatus* = enum
@@ -20,10 +15,6 @@ type MQTTStatus* = enum
   PersistenceError = -2,
   Failure = -1,
   Success = 0
-
-type MQTTMessage* = ptr MQTTClient_message
-
-type MQTTDeliveryToken* = MQTTClient_deliveryToken
 
 type QOS* {.pure.} = enum
   AtMostOnce = 0,
@@ -39,6 +30,18 @@ type MQTTPersistenceType* = enum
   Default = 0,
   None = 1,
   User = 2
+
+type MQTTMessage* = object
+  payload*: string
+  qos*: QOS
+  retained*: bool  
+
+type MQTTDeliveryToken* = MQTTClient_deliveryToken
+
+# Helper to create a string from a cstring+len
+proc `$`(cs: cstring, len: int): string =
+  result = newString(len)
+  copyMem(addr(result[0]), cs, len)
 
 # check a return code and if not Success, raise an MQTTError
 proc rcCheck(rc: cint) {.raises: [MQTTError].} =
@@ -63,6 +66,11 @@ proc newConnectOptions*(): MQTTClient_connectOptions =
   result.serverURIs = nil
   result.MQTTVersion = 0
 
+#define MQTTClient_message_initializer { {'M', 'Q', 'T', 'M'}, 0, 0, NULL, 0, 0, 0, 0 }
+proc MQTTClient_message_initializer*(): MQTTClient_message =
+  result.struct_id = ['M','Q','T','M'] 
+  # rest of struct is zero'd
+
 proc newClient*(address, clientId: string, persistenceType: MQTTPersistenceType = Default, persistenceContext: pointer = nil): MQTTClient {.raises: [MQTTError].} =
   rcCheck MQTTClient_create(addr result, address, clientId, cint persistenceType, persistenceContext)
 
@@ -86,22 +94,34 @@ proc isConnected*(client: MQTTClient): bool =
 proc publish*(client: MQTTClient, topicName: string, payload: string,
               qos: QOS, retained: bool): MQTTDeliveryToken {.raises: [MQTTError].} = 
   let payloadlen = cint payload.len
-  var payload = payload
-  rcCheck MQTTClient_publish(client, topicName, payloadlen, cast[pointer](addr payload[0]), cint qos, cint retained, addr result)
+  var payload = cstring(payload)
+  rcCheck MQTTClient_publish(client, topicName, payloadlen, addr payload, cint qos, cint retained, addr result)
 
-proc publishMessage*(client: MQTTClient, topicName: string, msg:
-                     MQTTClient_message, dt: var MQTTDeliveryToken) {.raises: [MQTTError].} =
-  var msg = msg
-  rcCheck MQTTClient_publishMessage(client, topicName, addr msg, addr dt)
+proc publishMessage*(client: MQTTClient, topicName: string,
+                     msg: MQTTMessage): MQTTDeliveryToken {.raises: [MQTTError].} =
+  var cmsg = MQTTClient_message_initializer()
+  cmsg.payload = cstring(msg.payload)
+  cmsg.payloadlen = cint len msg.payload
+  cmsg.qos = cint msg.qos
+  cmsg.retained = cint msg.retained
+  rcCheck MQTTClient_publishMessage(client, topicName, addr cmsg, addr result)
     
 proc receive*(client: MQTTClient, topicName: var string, message: var MQTTMessage,
               timeout: culong): bool {.raises: [MQTTError].} =
   var cTopicName: cstring
   var topicLen: cint
-  rcCheck MQTTClient_receive(client, addr cTopicName, addr topicLen, addr message, timeout)
-  result = message.isNil
-  topicName = cTopicName $ topicLen
-  MQTTClient_free(cTopicName)
+  var cmessage: ptr MQTTClient_message
+  try:
+    rcCheck MQTTClient_receive(client, addr cTopicName, addr topicLen, addr cmessage, timeout)
+    topicName = cTopicName $ topicLen
+    result = cmessage.isNil # timed out?
+  finally:
+    if cmessage != nil:
+      message.payload = cast[cstring](cmessage.payload) $ cmessage.payloadlen
+      message.qos = QOS cmessage.qos
+      message.retained = cmessage.retained != 0
+      MQTTClient_freeMessage(addr cmessage)
+    MQTTClient_free(cTopicName)
 
 proc setCallbacks*(client: MQTTClient, context: pointer, 
                    cl: ptr MQTTClient_connectionLost, 
@@ -159,17 +179,3 @@ proc mqttYield*() =
 proc destroy*(client: MQTTClient) =
   var c = client
   MQTTClient_destroy(addr c)
-
-proc free*(message: MQTTMessage) =
-  var m = message
-  MQTTClient_freeMessage(addr m)
-
-#define MQTTClient_message_initializer { {'M', 'Q', 'T', 'M'}, 0, 0, NULL, 0, 0, 0, 0 }
-proc MQTTClient_message_initializer*(): MQTTClient_message =
-  result.struct_id = ['M','Q','T','C'] 
-  # rest of struct is zero'd
-
-# Return the payload as a string
-proc `$`*(message: MQTTMessage): string =
-  result = newString(message.payloadlen)
-  copyMem(addr(result[0]), message.payload, message.payloadlen)

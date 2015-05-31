@@ -19,8 +19,7 @@ proc main() =
       var message: MQTTMessage
       let timeout = client.receive(topicName, message, 10000)
       if not timeout:
-        echo message
-        message.free()
+        echo message.payload
       else:
         echo "timeout!"
 
