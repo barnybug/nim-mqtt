@@ -12,7 +12,7 @@ proc main() =
     var connectOptions = newConnectOptions()
 
     client.connect(connectOptions)
-    client.subscribe("#", QOS)
+    client.subscribe("#", QOS0)
 
     while true:
       var topicName: string

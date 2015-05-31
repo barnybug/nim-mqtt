@@ -25,6 +25,16 @@ type MQTTMessage* = ptr MQTTClient_message
 
 type MQTTDeliveryToken* = MQTTClient_deliveryToken
 
+type QOS* {.pure.} = enum
+  AtMostOnce = 0,
+  AtLeastOnce = 1,
+  ExactlyOnce = 2
+
+const
+  QOS0* = QOS.AtMostOnce
+  QOS1* = QOS.AtLeastOnce
+  QOS2* = QOS.ExactlyOnce
+
 type MQTTPersistenceType* = enum
   Default = 0,
   None = 1,
@@ -74,10 +84,10 @@ proc isConnected*(client: MQTTClient): bool =
   MQTTClient_isConnected(client) != 0
 
 proc publish*(client: MQTTClient, topicName: string, payload: string,
-              qos: cint, retained: cint): MQTTDeliveryToken {.raises: [MQTTError].} = 
+              qos: QOS, retained: bool): MQTTDeliveryToken {.raises: [MQTTError].} = 
   let payloadlen = cint payload.len
   var payload = payload
-  rcCheck MQTTClient_publish(client, topicName, payloadlen, cast[pointer](addr payload[0]), qos, retained, addr result)
+  rcCheck MQTTClient_publish(client, topicName, payloadlen, cast[pointer](addr payload[0]), cint qos, cint retained, addr result)
 
 proc publishMessage*(client: MQTTClient, topicName: string, msg:
                      MQTTClient_message, dt: var MQTTDeliveryToken) {.raises: [MQTTError].} =
@@ -99,14 +109,15 @@ proc setCallbacks*(client: MQTTClient, context: pointer,
                    dc: ptr MQTTClient_deliveryComplete) {.raises: [MQTTError].} =
   rcCheck MQTTClient_setCallbacks(client, context, cl, ma, dc)
 
-proc subscribe*(client: MQTTClient, topic: string, qos: cint) {.raises: [MQTTError].} =
-  rcCheck MQTTClient_subscribe(client, topic, qos)
+proc subscribe*(client: MQTTClient, topic: string, qos: QOS) {.raises: [MQTTError].} =
+  rcCheck MQTTClient_subscribe(client, topic, cint qos)
 
-proc subscribeMany*(client: MQTTClient, topic: openarray[string], qos: openarray[cint]) {.raises: [MQTTError, Exception].} =
+proc subscribeMany*(client: MQTTClient, topic: openarray[string], qos: openarray[QOS]) {.raises: [MQTTError, Exception].} =
   # copy into C compatible types
   let ctopic = system.allocCStringArray(topic)
   var cqos: seq[cint] = @[]
-  cqos.insert(qos, 0)
+  for q in qos:
+    add(cqos, cint q)
   try:
     rcCheck MQTTClient_subscribeMany(client, cint topic.len, ctopic, addr cqos[0])
   finally:

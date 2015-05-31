@@ -12,7 +12,7 @@ proc main() =
 
     client.connect(connectOptions)
     # discard the delivery token
-    discard client.publish("mytopic", "payload!", 0, 0)
+    discard client.publish("mytopic", "payload!", QOS.AtMostOnce, false)
     client.disconnect(1000)
     client.destroy()
   except MQTTError:
