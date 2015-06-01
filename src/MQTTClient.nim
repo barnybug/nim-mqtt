@@ -4,7 +4,7 @@ when defined(windows):
     libpahomqtt* = "paho-mqtt3c.dll"
 elif defined(macosx): 
   const 
-    libpahomqtt* = "libpaho-mqtt3c.dylib"
+    libpahomqtt* = "libpaho-mqtt3c.so"
 else: 
   const 
     libpahomqtt* = "libpaho-mqtt3c.so"
