@@ -95,7 +95,7 @@ proc publish*(client: MQTTClient, topicName: string, payload: string,
               qos: QOS, retained: bool): MQTTDeliveryToken {.raises: [MQTTError].} = 
   let payloadlen = cint payload.len
   var payload = cstring(payload)
-  rcCheck MQTTClient_publish(client, topicName, payloadlen, addr payload, cint qos, cint retained, addr result)
+  rcCheck MQTTClient_publish(client, topicName, payloadlen, payload, cint qos, cint retained, addr result)
 
 proc publishMessage*(client: MQTTClient, topicName: string,
                      msg: MQTTMessage): MQTTDeliveryToken {.raises: [MQTTError].} =
@@ -123,11 +123,50 @@ proc receive*(client: MQTTClient, topicName: var string, message: var MQTTMessag
       MQTTClient_freeMessage(addr cmessage)
     MQTTClient_free(cTopicName)
 
-proc setCallbacks*(client: MQTTClient, context: pointer, 
-                   cl: ptr MQTTClient_connectionLost, 
-                   ma: ptr MQTTClient_messageArrived, 
-                   dc: ptr MQTTClient_deliveryComplete) {.raises: [MQTTError].} =
-  rcCheck MQTTClient_setCallbacks(client, context, cl, ma, dc)
+type MessageArrived* = proc (topicName: string; message: MQTTMessage): cint
+type DeliveryComplete* = proc (dt: MQTTClient_deliveryToken)
+type ConnectionLost* = proc (cause: string)
+
+type CallbackContext = object
+  connectionLost: ConnectionLost
+  messageArrived: MessageArrived
+  deliveryComplete: DeliveryComplete
+
+proc connectionLost(context: pointer, cause: cstring) {.cdecl.} =
+  var context = cast[ptr CallbackContext](context)
+  if context.connectionLost != nil:
+    var cause = $cause
+    context.connectionLost(cause)
+
+proc messageArrived(context: pointer, topicName: cstring, topicLen: cint, cmessage: ptr MQTTClient_message): cint {.cdecl.} =
+  var context = cast[ptr CallbackContext](context)
+  if context.messageArrived != nil:
+    # length is only sent if the string contains nulls, otherwise it is a null-terminated cstring
+    var topic = if topicLen > 0: topicName $ topicLen
+      else: $topicName
+    var message = MQTTMessage()
+    if cmessage != nil:
+      message.payload = cast[cstring](cmessage.payload) $ cmessage.payloadlen
+      message.qos = QOS cmessage.qos
+      message.retained = cmessage.retained != 0
+    result = context.messageArrived(topic, message)
+
+proc deliveryComplete(context: pointer, dt: MQTTDeliveryToken) {.cdecl.} =
+  var context = cast[ptr CallbackContext](context)
+  if context.deliveryComplete != nil:
+    context.deliveryComplete(dt)
+
+# global holding context callbacks
+var context = CallbackContext()
+
+proc setCallbacks*(client: MQTTClient,
+                   cl: ConnectionLost,
+                   ma: MessageArrived,
+                   dc: DeliveryComplete) {.raises: [MQTTError, Exception].} =
+  context.connectionLost = cl
+  context.messageArrived = ma
+  context.deliveryComplete = dc
+  rcCheck MQTTClient_setCallbacks(client, addr context, connectionLost, messageArrived, deliveryComplete)
 
 proc subscribe*(client: MQTTClient, topic: string, qos: QOS) {.raises: [MQTTError].} =
   rcCheck MQTTClient_subscribe(client, topic, cint qos)

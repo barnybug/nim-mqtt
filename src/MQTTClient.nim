@@ -355,9 +355,9 @@ when not defined(MQTTCLIENT_H):
   #  ::MQTTCLIENT_FAILURE if an error occurred.
   # 
   proc MQTTClient_setCallbacks*(handle: MQTTClient; context: pointer; 
-                                cl: ptr MQTTClient_connectionLost; 
-                                ma: ptr MQTTClient_messageArrived; 
-                                dc: ptr MQTTClient_deliveryComplete): cint {.
+                                cl: MQTTClient_connectionLost; 
+                                ma: MQTTClient_messageArrived; 
+                                dc: MQTTClient_deliveryComplete): cint {.
       cdecl, importc: "MQTTClient_setCallbacks", dynlib: libpahomqtt.}
   #*
   #  This function creates an MQTT client ready for connection to the 
